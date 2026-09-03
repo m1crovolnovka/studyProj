@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: watchlist
+  datasource:
+    url: jdbc:postgresql://localhost:5432/watchlist
+    username: watchlist
+    password: watchlist
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  docker:
+    compose:
+      file: docker-compose.yml
+  security:
+    user:
+      name: admin
+      password: admin
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

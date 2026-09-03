@@ -13,9 +13,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ApiExceptionHandler {
 
 	@ExceptionHandler(TitleNotFoundException.class)
-	public ProblemDetail handleNotFound(TitleNotFoundException ex) {
+	public ProblemDetail handleTitleNotFound(TitleNotFoundException ex) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 		problem.setTitle("Title not found");
+		return problem;
+	}
+
+	@ExceptionHandler({ EpisodeNotFoundException.class, ReviewNotFoundException.class })
+	public ProblemDetail handleChildNotFound(RuntimeException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+		problem.setTitle("Resource not found");
 		return problem;
 	}
 

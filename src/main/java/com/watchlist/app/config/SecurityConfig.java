@@ -18,7 +18,8 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/titles", "/api/titles/stats", "/api/titles/*").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/titles", "/api/titles/stats", "/api/titles/*",
+								"/api/titles/*/episodes/**", "/api/titles/*/reviews/**").permitAll()
 						.anyRequest().authenticated())
 				.httpBasic(Customizer.withDefaults());
 		return http.build();

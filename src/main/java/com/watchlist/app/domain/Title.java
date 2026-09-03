@@ -1,5 +1,9 @@
 package com.watchlist.app.domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -36,6 +41,12 @@ public class Title {
 
 	@Column(length = 2000)
 	private String notes;
+
+	@OneToMany(mappedBy = "title", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Episode> episodes = new ArrayList<>();
+
+	@OneToMany(mappedBy = "title", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Review> reviews = new ArrayList<>();
 
 	public Long getId() {
 		return id;
@@ -99,5 +110,21 @@ public class Title {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public List<Episode> getEpisodes() {
+		return episodes;
+	}
+
+	public void setEpisodes(List<Episode> episodes) {
+		this.episodes = episodes;
+	}
+
+	public List<Review> getReviews() {
+		return reviews;
+	}
+
+	public void setReviews(List<Review> reviews) {
+		this.reviews = reviews;
 	}
 }

@@ -64,7 +64,7 @@ public class TitleController {
 
 	@PostMapping
 	@Operation(summary = "Добавить фильм или сериал")
-	@ApiResponse(responseCode = "201",description = "Тайт отлично создан")
+	@ApiResponse(responseCode = "201",description = "Тайтл отлично создан")
 	public ResponseEntity<TitleResponse> create(@Valid @RequestBody TitleRequest request) {
 		TitleResponse created = titleService.create(request);
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()

@@ -14,13 +14,28 @@ public class OpenApiConfig {
 
 	@Bean
 	OpenAPI watchlistOpenApi() {
+
 		return new OpenAPI()
 				.info(new Info()
 						.title("Watchlist API")
-						.description("REST API списка фильмов и сериалов для просмотра")
-						.version("v1"))
-				.components(new Components().addSecuritySchemes("basicAuth",
-						new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("basic")))
-				.addSecurityItem(new SecurityRequirement().addList("basicAuth"));
+						.description(
+								"REST API списка фильмов и сериалов для просмотра"
+						)
+						.version("v1")
+				)
+				.components(
+						new Components()
+								.addSecuritySchemes(
+										"bearerAuth",
+										new SecurityScheme()
+												.type(SecurityScheme.Type.HTTP)
+												.scheme("bearer")
+												.bearerFormat("JWT")
+								)
+				)
+				.addSecurityItem(
+						new SecurityRequirement()
+								.addList("bearerAuth")
+				);
 	}
 }

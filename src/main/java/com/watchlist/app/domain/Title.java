@@ -42,12 +42,6 @@ public class Title {
 	@Column(length = 2000)
 	private String notes;
 
-	@OneToMany(mappedBy = "title", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<Episode> episodes = new ArrayList<>();
-
-	@OneToMany(mappedBy = "title", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<Review> reviews = new ArrayList<>();
-
 	public Long getId() {
 		return id;
 	}
@@ -112,19 +106,4 @@ public class Title {
 		this.notes = notes;
 	}
 
-	public List<Episode> getEpisodes() {
-		return episodes;
-	}
-
-	public void setEpisodes(List<Episode> episodes) {
-		this.episodes = episodes;
-	}
-
-	public List<Review> getReviews() {
-		return reviews;
-	}
-
-	public void setReviews(List<Review> reviews) {
-		this.reviews = reviews;
-	}
 }

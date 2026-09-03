@@ -14,7 +14,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -27,113 +26,111 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.watchlist.app.config.SecurityConfig;
-import com.watchlist.app.dto.ReviewResponse;
+import com.watchlist.app.dto.DepartmentResponse;
 import com.watchlist.app.exception.ApiExceptionHandler;
-import com.watchlist.app.exception.ReviewNotFoundException;
-import com.watchlist.app.exception.TitleNotFoundException;
-import com.watchlist.app.service.ReviewService;
+import com.watchlist.app.exception.DepartmentNotFoundException;
+import com.watchlist.app.exception.DuplicateDepartmentException;
+import com.watchlist.app.service.DepartmentService;
 
-@WebMvcTest(controllers = ReviewController.class)
+@WebMvcTest(controllers = DepartmentController.class)
 @AutoConfigureMockMvc
 @Import({ SecurityConfig.class, ApiExceptionHandler.class })
-class ReviewControllerTest {
+class DepartmentControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private ReviewService reviewService;
+	private DepartmentService departmentService;
 
 	@Test
-	void getReviewsIsPublic() throws Exception {
-		when(reviewService.findByTitleId(1L)).thenReturn(List.of(
-				new ReviewResponse(3L, 1L, "Loved it", 9, LocalDateTime.of(2026, 1, 1, 12, 0), null)));
+	void getDepartmentsIsPublic() throws Exception {
+		when(departmentService.findAll()).thenReturn(List.of(
+				new DepartmentResponse(1L, "IT", "Office A")));
 
-		mockMvc.perform(get("/api/titles/1/reviews"))
+		mockMvc.perform(get("/api/departments"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].content").value("Loved it"))
-				.andExpect(jsonPath("$[0].rating").value(9));
+				.andExpect(jsonPath("$[0].name").value("IT"));
 	}
 
 	@Test
 	void createRequiresAuth() throws Exception {
-		mockMvc.perform(post("/api/titles/1/reviews")
+		mockMvc.perform(post("/api/departments")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"content":"Loved it","rating":9}
+						{"name":"IT"}
 						"""))
 				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
 	void createWithAuth() throws Exception {
-		when(reviewService.create(eq(1L), any())).thenReturn(
-				new ReviewResponse(5L, 1L, "Loved it", 9, LocalDateTime.now(), null));
+		when(departmentService.create(any())).thenReturn(
+				new DepartmentResponse(5L, "IT", "Office A"));
 
-		mockMvc.perform(post("/api/titles/1/reviews")
+		mockMvc.perform(post("/api/departments")
 				.with(user("admin"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"content":"Loved it","rating":9}
+						{"name":"IT","location":"Office A"}
 						"""))
 				.andExpect(status().isCreated())
-				.andExpect(header().string("Location", "http://localhost/api/titles/1/reviews/5"))
+				.andExpect(header().string("Location", "http://localhost/api/departments/5"))
 				.andExpect(jsonPath("$.id").value(5));
 	}
 
 	@Test
 	void createRejectsInvalidBody() throws Exception {
-		mockMvc.perform(post("/api/titles/1/reviews")
+		mockMvc.perform(post("/api/departments")
 				.with(user("admin"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"content":"","rating":99}
+						{"name":""}
 						"""))
 				.andExpect(status().isBadRequest());
 	}
 
 	@Test
-	void updateWithAuth() throws Exception {
-		when(reviewService.update(eq(2L), any())).thenReturn(
-				new ReviewResponse(2L, 1L, "Changed", 7, LocalDateTime.now(), LocalDateTime.now()));
+	void createDuplicateReturnsConflict() throws Exception {
+		when(departmentService.create(any())).thenThrow(new DuplicateDepartmentException("IT"));
 
-		mockMvc.perform(put("/api/titles/reviews/2")
+		mockMvc.perform(post("/api/departments")
 				.with(user("admin"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"content":"Changed","rating":7}
+						{"name":"IT"}
+						"""))
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void updateWithAuth() throws Exception {
+		when(departmentService.update(eq(1L), any())).thenReturn(
+				new DepartmentResponse(1L, "IT", "Office B"));
+
+		mockMvc.perform(put("/api/departments/1")
+				.with(user("admin"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"name":"IT","location":"Office B"}
 						"""))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content").value("Changed"))
-				.andExpect(jsonPath("$.rating").value(7));
+				.andExpect(jsonPath("$.location").value("Office B"));
 	}
 
 	@Test
-	void createThrowsWhenTitleMissing() throws Exception {
-		doThrow(new TitleNotFoundException(99L)).when(reviewService).create(eq(99L), any());
+	void deleteMissingDepartment() throws Exception {
+		doThrow(new DepartmentNotFoundException(99L)).when(departmentService).delete(99L);
 
-		mockMvc.perform(post("/api/titles/99/reviews")
-				.with(user("admin"))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"content":"Loved it","rating":9}
-						"""))
+		mockMvc.perform(delete("/api/departments/99").with(user("admin")))
 				.andExpect(status().isNotFound());
 	}
 
 	@Test
-	void deleteMissingReview() throws Exception {
-		doThrow(new ReviewNotFoundException(99L)).when(reviewService).delete(99L);
+	void deleteExistingDepartment() throws Exception {
+		doNothing().when(departmentService).delete(1L);
 
-		mockMvc.perform(delete("/api/titles/reviews/99").with(user("admin")))
-				.andExpect(status().isNotFound());
-	}
-
-	@Test
-	void deleteExistingReview() throws Exception {
-		doNothing().when(reviewService).delete(1L);
-
-		mockMvc.perform(delete("/api/titles/reviews/1").with(user("admin")))
+		mockMvc.perform(delete("/api/departments/1").with(user("admin")))
 				.andExpect(status().isNoContent());
 	}
 }

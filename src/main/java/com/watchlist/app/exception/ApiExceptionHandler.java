@@ -19,10 +19,17 @@ public class ApiExceptionHandler {
 		return problem;
 	}
 
-	@ExceptionHandler({ EpisodeNotFoundException.class, ReviewNotFoundException.class })
+	@ExceptionHandler({ DepartmentNotFoundException.class, EmployeeNotFoundException.class, PositionNotFoundException.class })
 	public ProblemDetail handleChildNotFound(RuntimeException ex) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 		problem.setTitle("Resource not found");
+		return problem;
+	}
+
+	@ExceptionHandler({ DuplicateDepartmentException.class, DuplicatePositionException.class })
+	public ProblemDetail handleDuplicateResource(RuntimeException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+		problem.setTitle("Duplicate resource");
 		return problem;
 	}
 

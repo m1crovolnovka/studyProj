@@ -19,7 +19,7 @@ public class ApiExceptionHandler {
 		return problem;
 	}
 
-	@ExceptionHandler({ DepartmentNotFoundException.class, EmployeeNotFoundException.class, PositionNotFoundException.class })
+	@ExceptionHandler({ DepartmentNotFoundException.class, EmployeeNotFoundException.class, PositionNotFoundException.class, EmployeeTaskNotFoundException.class, UserNotFoundException.class })
 	public ProblemDetail handleChildNotFound(RuntimeException ex) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 		problem.setTitle("Resource not found");
@@ -30,6 +30,20 @@ public class ApiExceptionHandler {
 	public ProblemDetail handleDuplicateResource(RuntimeException ex) {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
 		problem.setTitle("Duplicate resource");
+		return problem;
+	}
+
+	@ExceptionHandler(UsernameAlreadyExistsException.class)
+	public ProblemDetail handleUsernameAlreadyExists(UsernameAlreadyExistsException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+		problem.setTitle("Username already exists");
+		return problem;
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+		problem.setTitle("Invalid request");
 		return problem;
 	}
 

@@ -33,5 +33,7 @@ build/
 .vscode/
 
 ### keys ###
-src/main/resources/public.pem
-src/main/resources/private.pem
+src/main/resources/keys/private.pem
+src/main/resources/keys/public.pem
+src/test/resources/keys/private.pem
+src/test/resources/keys/public.pem

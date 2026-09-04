@@ -51,7 +51,7 @@ public class JwtService {
 
         JwsHeader header = JwsHeader
                 .with(SignatureAlgorithm.RS256)
-                .type("at+jwt")
+                .type("JWT")
                 .keyId("watchlist-rsa-key-1")
                 .build();
 

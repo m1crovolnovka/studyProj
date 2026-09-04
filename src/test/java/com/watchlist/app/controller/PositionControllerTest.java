@@ -23,14 +23,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.watchlist.app.config.SecurityConfig;
+import com.watchlist.app.config.TestSecurityConfig;
 import com.watchlist.app.dto.PositionResponse;
 import com.watchlist.app.exception.ApiExceptionHandler;
 import com.watchlist.app.service.PositionService;
 
 @WebMvcTest(controllers = PositionController.class)
 @AutoConfigureMockMvc
-@Import({ SecurityConfig.class, ApiExceptionHandler.class })
+@Import({ TestSecurityConfig.class, ApiExceptionHandler.class })
 class PositionControllerTest {
 
 	@Autowired
@@ -63,7 +63,7 @@ class PositionControllerTest {
 		when(positionService.create(any())).thenReturn(new PositionResponse(1L, "SENIOR", new BigDecimal("1.50")));
 
 		mockMvc.perform(post("/api/positions")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"SENIOR","coefficient":1.5}
@@ -78,12 +78,34 @@ class PositionControllerTest {
 		when(positionService.update(eq(1L), any())).thenReturn(new PositionResponse(1L, "LEAD", new BigDecimal("1.80")));
 
 		mockMvc.perform(put("/api/positions/1")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"LEAD","coefficient":1.8}
 						"""))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.name").value("LEAD"));
+	}
+
+	@Test
+	void createPositionForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(post("/api/positions")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"name":"SENIOR","coefficient":1.5}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void updatePositionForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(put("/api/positions/1")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"name":"LEAD","coefficient":1.8}
+						"""))
+				.andExpect(status().isForbidden());
 	}
 }

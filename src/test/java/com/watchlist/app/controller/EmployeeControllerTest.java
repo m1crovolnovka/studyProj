@@ -26,18 +26,20 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.watchlist.app.config.SecurityConfig;
+import com.watchlist.app.config.TestSecurityConfig;
+import com.watchlist.app.dto.EmployeeLinkResponse;
 import com.watchlist.app.dto.EmployeeResponse;
 import com.watchlist.app.dto.PositionResponse;
 import com.watchlist.app.dto.SalarySyncResponse;
 import com.watchlist.app.exception.ApiExceptionHandler;
 import com.watchlist.app.exception.DepartmentNotFoundException;
 import com.watchlist.app.exception.EmployeeNotFoundException;
+import com.watchlist.app.service.EmployeeLinkService;
 import com.watchlist.app.service.EmployeeService;
 
 @WebMvcTest(controllers = EmployeeController.class)
 @AutoConfigureMockMvc
-@Import({ SecurityConfig.class, ApiExceptionHandler.class })
+@Import({ TestSecurityConfig.class, ApiExceptionHandler.class })
 class EmployeeControllerTest {
 
 	@Autowired
@@ -45,6 +47,9 @@ class EmployeeControllerTest {
 
 	@MockitoBean
 	private EmployeeService employeeService;
+
+	@MockitoBean
+	private EmployeeLinkService employeeLinkService;
 
 	@Test
 	void getEmployeesIsPublic() throws Exception {
@@ -101,7 +106,7 @@ class EmployeeControllerTest {
 						new BigDecimal("100"), new BigDecimal("150.00")));
 
 		mockMvc.perform(post("/api/departments/1/employees")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"firstName":"Alice","lastName":"One","positionId":2,"baseSalary":100}
@@ -115,7 +120,7 @@ class EmployeeControllerTest {
 	@Test
 	void createRejectsInvalidBody() throws Exception {
 		mockMvc.perform(post("/api/departments/1/employees")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"firstName":"","lastName":"","baseSalary":100}
@@ -128,7 +133,7 @@ class EmployeeControllerTest {
 		doThrow(new DepartmentNotFoundException(99L)).when(employeeService).create(eq(99L), any());
 
 		mockMvc.perform(post("/api/departments/99/employees")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"firstName":"Alice","lastName":"One","positionId":2,"baseSalary":100}
@@ -144,7 +149,7 @@ class EmployeeControllerTest {
 						new BigDecimal("100"), new BigDecimal("180.00")));
 
 		mockMvc.perform(put("/api/employees/2")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"firstName":"Alice","lastName":"One","positionId":4,"baseSalary":100}
@@ -152,6 +157,55 @@ class EmployeeControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.position.name").value("LEAD"))
 				.andExpect(jsonPath("$.salary").value(180.00));
+	}
+
+	@Test
+	void createForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(post("/api/departments/1/employees")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"firstName":"Alice","lastName":"One","positionId":2,"baseSalary":100}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void updateForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(put("/api/employees/2")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"firstName":"Alice","lastName":"One","positionId":2,"baseSalary":100}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void linkUserWithAuth() throws Exception {
+		when(employeeLinkService.link(3L, 7L)).thenReturn(
+				new EmployeeLinkResponse(3L, 7L, "alice", "Alice", "One"));
+
+		mockMvc.perform(post("/api/employees/3/user")
+				.with(user("admin").roles("ADMIN"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"userId":7}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.username").value("alice"))
+				.andExpect(jsonPath("$.employeeId").value(3));
+	}
+
+	@Test
+	void linkUserForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(post("/api/employees/3/user")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"userId":7}
+						"""))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
@@ -164,7 +218,7 @@ class EmployeeControllerTest {
 	void synchronizeSalariesWithAuth() throws Exception {
 		when(employeeService.synchronizeSalaries()).thenReturn(new SalarySyncResponse(3));
 
-		mockMvc.perform(post("/api/employees/sync-salaries").with(user("admin")))
+		mockMvc.perform(post("/api/employees/sync-salaries").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.synchronizedEmployees").value(3));
 	}
@@ -173,7 +227,7 @@ class EmployeeControllerTest {
 	void deleteMissingEmployee() throws Exception {
 		doThrow(new EmployeeNotFoundException(99L)).when(employeeService).delete(99L);
 
-		mockMvc.perform(delete("/api/employees/99").with(user("admin")))
+		mockMvc.perform(delete("/api/employees/99").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isNotFound());
 	}
 
@@ -181,7 +235,7 @@ class EmployeeControllerTest {
 	void deleteExistingEmployee() throws Exception {
 		doNothing().when(employeeService).delete(1L);
 
-		mockMvc.perform(delete("/api/employees/1").with(user("admin")))
+		mockMvc.perform(delete("/api/employees/1").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isNoContent());
 	}
 }

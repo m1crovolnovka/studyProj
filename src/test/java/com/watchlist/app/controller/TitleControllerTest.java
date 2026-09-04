@@ -25,7 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.watchlist.app.config.SecurityConfig;
+import com.watchlist.app.config.TestSecurityConfig;
 import com.watchlist.app.domain.TitleType;
 import com.watchlist.app.domain.WatchStatus;
 import com.watchlist.app.dto.TitleResponse;
@@ -36,7 +36,7 @@ import com.watchlist.app.service.TitleService;
 
 @WebMvcTest(controllers = TitleController.class)
 @AutoConfigureMockMvc
-@Import({ SecurityConfig.class, ApiExceptionHandler.class })
+@Import({ TestSecurityConfig.class, ApiExceptionHandler.class })
 class TitleControllerTest {
 
 	@Autowired
@@ -80,7 +80,7 @@ class TitleControllerTest {
 				new TitleResponse(5L, "Dune", TitleType.MOVIE, 2021, "Sci-Fi", WatchStatus.TO_WATCH, null, null));
 
 		mockMvc.perform(post("/api/titles")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"Dune","type":"MOVIE","releaseYear":2021,"genre":"Sci-Fi"}
@@ -93,7 +93,7 @@ class TitleControllerTest {
 	@Test
 	void createRejectsInvalidBody() throws Exception {
 		mockMvc.perform(post("/api/titles")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"","type":"MOVIE"}
@@ -107,7 +107,7 @@ class TitleControllerTest {
 				new TitleResponse(1L, "Dune", TitleType.MOVIE, 2021, null, WatchStatus.WATCHING, null, null));
 
 		mockMvc.perform(patch("/api/titles/1/status")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"watchStatus":"WATCHING"}
@@ -117,10 +117,32 @@ class TitleControllerTest {
 	}
 
 	@Test
+	void createTitleForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(post("/api/titles")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"name":"Dune","type":"MOVIE"}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void patchStatusForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(patch("/api/titles/1/status")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"watchStatus":"WATCHING"}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
 	void deleteMissingTitle() throws Exception {
 		doThrow(new TitleNotFoundException(99L)).when(titleService).delete(99L);
 
-		mockMvc.perform(delete("/api/titles/99").with(user("admin")))
+		mockMvc.perform(delete("/api/titles/99").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isNotFound());
 	}
 
@@ -128,7 +150,7 @@ class TitleControllerTest {
 	void deleteExistingTitle() throws Exception {
 		doNothing().when(titleService).delete(1L);
 
-		mockMvc.perform(delete("/api/titles/1").with(user("admin")))
+		mockMvc.perform(delete("/api/titles/1").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isNoContent());
 	}
 }

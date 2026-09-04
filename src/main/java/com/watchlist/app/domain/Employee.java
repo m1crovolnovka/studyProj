@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -23,6 +24,10 @@ public class Employee {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "department_id", nullable = false)
 	private Department department;
+
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", unique = true)
+	private AppUser user;
 
 	@Column(nullable = false)
 	private String firstName;
@@ -55,6 +60,14 @@ public class Employee {
 
 	public void setDepartment(Department department) {
 		this.department = department;
+	}
+
+	public AppUser getUser() {
+		return user;
+	}
+
+	public void setUser(AppUser user) {
+		this.user = user;
 	}
 
 	public String getFirstName() {

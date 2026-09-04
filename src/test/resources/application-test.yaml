@@ -10,3 +10,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+jwt:
+  issuer: watchlist-api-test
+  audience: watchlist-api-test
+  private-key: classpath:keys/private.pem
+  public-key: classpath:keys/public.pem
+  access-token-lifetime: 15m
+  refresh-token-lifetime: 30d
+  secure-cookie: false

@@ -25,7 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.watchlist.app.config.SecurityConfig;
+import com.watchlist.app.config.TestSecurityConfig;
 import com.watchlist.app.dto.DepartmentResponse;
 import com.watchlist.app.exception.ApiExceptionHandler;
 import com.watchlist.app.exception.DepartmentNotFoundException;
@@ -34,7 +34,7 @@ import com.watchlist.app.service.DepartmentService;
 
 @WebMvcTest(controllers = DepartmentController.class)
 @AutoConfigureMockMvc
-@Import({ SecurityConfig.class, ApiExceptionHandler.class })
+@Import({ TestSecurityConfig.class, ApiExceptionHandler.class })
 class DepartmentControllerTest {
 
 	@Autowired
@@ -69,7 +69,7 @@ class DepartmentControllerTest {
 				new DepartmentResponse(5L, "IT", "Office A"));
 
 		mockMvc.perform(post("/api/departments")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"IT","location":"Office A"}
@@ -82,7 +82,7 @@ class DepartmentControllerTest {
 	@Test
 	void createRejectsInvalidBody() throws Exception {
 		mockMvc.perform(post("/api/departments")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":""}
@@ -95,7 +95,7 @@ class DepartmentControllerTest {
 		when(departmentService.create(any())).thenThrow(new DuplicateDepartmentException("IT"));
 
 		mockMvc.perform(post("/api/departments")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"IT"}
@@ -109,7 +109,7 @@ class DepartmentControllerTest {
 				new DepartmentResponse(1L, "IT", "Office B"));
 
 		mockMvc.perform(put("/api/departments/1")
-				.with(user("admin"))
+				.with(user("admin").roles("ADMIN"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"name":"IT","location":"Office B"}
@@ -119,10 +119,32 @@ class DepartmentControllerTest {
 	}
 
 	@Test
+	void createForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(post("/api/departments")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"name":"IT"}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void updateForbiddenForRegularUser() throws Exception {
+		mockMvc.perform(put("/api/departments/1")
+				.with(user("bob").roles("USER"))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"name":"IT"}
+						"""))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
 	void deleteMissingDepartment() throws Exception {
 		doThrow(new DepartmentNotFoundException(99L)).when(departmentService).delete(99L);
 
-		mockMvc.perform(delete("/api/departments/99").with(user("admin")))
+		mockMvc.perform(delete("/api/departments/99").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isNotFound());
 	}
 
@@ -130,7 +152,7 @@ class DepartmentControllerTest {
 	void deleteExistingDepartment() throws Exception {
 		doNothing().when(departmentService).delete(1L);
 
-		mockMvc.perform(delete("/api/departments/1").with(user("admin")))
+		mockMvc.perform(delete("/api/departments/1").with(user("admin").roles("ADMIN")))
 				.andExpect(status().isNoContent());
 	}
 }

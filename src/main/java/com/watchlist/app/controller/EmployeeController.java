@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.watchlist.app.dto.EmployeeLinkRequest;
+import com.watchlist.app.dto.EmployeeLinkResponse;
 import com.watchlist.app.dto.EmployeeRequest;
 import com.watchlist.app.dto.EmployeeResponse;
 import com.watchlist.app.dto.SalarySyncResponse;
+import com.watchlist.app.service.EmployeeLinkService;
 import com.watchlist.app.service.EmployeeService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,9 +36,13 @@ import jakarta.validation.Valid;
 public class EmployeeController {
 
 	private final EmployeeService employeeService;
+	private final EmployeeLinkService employeeLinkService;
 
-	public EmployeeController(EmployeeService employeeService) {
+	public EmployeeController(
+			EmployeeService employeeService,
+			EmployeeLinkService employeeLinkService) {
 		this.employeeService = employeeService;
+		this.employeeLinkService = employeeLinkService;
 	}
 
 	@GetMapping("/departments/{departmentId}/employees")
@@ -75,6 +82,15 @@ public class EmployeeController {
 			@PathVariable Long id,
 			@Valid @RequestBody EmployeeRequest request) {
 		return employeeService.update(id, request);
+	}
+
+	@PostMapping("/employees/{id}/user")
+	@Operation(summary = "Привязать пользователя к работнику (пользователь = работник)")
+	@ApiResponse(responseCode = "200", description = "Работник привязан к пользователю")
+	public EmployeeLinkResponse linkUser(
+			@PathVariable Long id,
+			@Valid @RequestBody EmployeeLinkRequest request) {
+		return employeeLinkService.link(id, request.userId());
 	}
 
 	@PostMapping("/employees/sync-salaries")

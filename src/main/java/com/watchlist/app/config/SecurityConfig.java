@@ -12,8 +12,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.crypto.password4j.Argon2Password4jPasswordEncoder;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -62,6 +62,7 @@ public class SecurityConfig {
 
 						.requestMatchers(
 								"/api/auth/login",
+								"/api/auth/register",
 								"/api/auth/refresh",
 								"/api/auth/logout"
 						).permitAll()
@@ -72,19 +73,19 @@ public class SecurityConfig {
 								"/v3/api-docs/**"
 						).permitAll()
 
-						.requestMatchers(
-								"/api/titles",
-								"/api/titles/stats",
-								"/api/titles/*"
-						).permitAll()
+						.requestMatchers("/api/tasks", "/api/tasks/**")
+								.authenticated()
 
 						.requestMatchers(
-								"/api/departments/**",
-								"/api/employees/*",
-								"/api/positions/**",
-								"/api/episodes/**",
-								"/api/reviews/**"
-						).permitAll()
+								org.springframework.http.HttpMethod.GET,
+								"/api/employees/*/tasks",
+								"/api/employees/*/tasks/**"
+						).hasRole("ADMIN")
+
+						.requestMatchers(
+								org.springframework.http.HttpMethod.POST,
+								"/api/employees/*/tasks"
+						).authenticated()
 
 						.requestMatchers(
 								org.springframework.http.HttpMethod.POST,
@@ -105,8 +106,20 @@ public class SecurityConfig {
 								org.springframework.http.HttpMethod.DELETE,
 								"/api/**"
 						).hasRole("ADMIN")
+						
+						.requestMatchers(
+						org.springframework.http.HttpMethod.GET,
+						"/api/titles",
+						"/api/titles/stats",
+						"/api/titles/*",
+						"/api/departments/**",
+						"/api/employees/**",
+						"/api/positions/**",
+						"/api/episodes/**",
+						"/api/reviews/**"
+					).permitAll()
 
-						.anyRequest().authenticated()
+					.anyRequest().authenticated()
 				)
 
 				.oauth2ResourceServer(oauth2 ->
@@ -127,7 +140,7 @@ public class SecurityConfig {
 
 	@Bean
 	PasswordEncoder passwordEncoder() {
-		return new Argon2Password4jPasswordEncoder();
+		return new BCryptPasswordEncoder();
 	}
 
 	@Bean

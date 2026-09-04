@@ -8,6 +8,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 
+import org.hibernate.Hibernate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,9 @@ import com.watchlist.app.repository.RefreshTokenRepository;
 
 @Service
 public class RefreshTokenService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(RefreshTokenService.class);
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final Duration refreshTokenLifetime;
@@ -52,12 +58,33 @@ public class RefreshTokenService {
 
         RefreshToken current = refreshTokenRepository
                 .findByTokenHash(hash(rawToken))
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Invalid refresh token"));
+                .orElseThrow(() -> {
+                    log.warn("Refresh token rejected: unknown token hash {}",
+                            mask(hash(rawToken)));
+                    return new IllegalArgumentException(
+                            "Refresh token is invalid or has already been used");
+                });
 
-        if (current.isRevoked() || current.isExpired()) {
-            throw new IllegalArgumentException("Invalid refresh token");
+        if (current.isRevoked()) {
+            log.warn("Refresh token rejected: token has been revoked (userId={})",
+                    current.getUser().getId());
+            throw new IllegalArgumentException(
+                    "Refresh token has been revoked");
         }
+
+        if (current.isExpired()) {
+            log.warn("Refresh token rejected: token has expired (userId={})",
+                    current.getUser().getId());
+            throw new IllegalArgumentException(
+                    "Refresh token has expired");
+        }
+
+        AppUser user = current.getUser();
+
+        // user is a lazy proxy here; initialize it while the
+        // transaction (and thus the Hibernate session) is still open,
+        // so the caller can safely use it after the transaction ends.
+        Hibernate.initialize(user);
 
         current.revoke();
 
@@ -65,7 +92,7 @@ public class RefreshTokenService {
 
         RefreshToken replacement = new RefreshToken(
                 hash(newRawToken),
-                current.getUser(),
+                user,
                 Instant.now().plus(refreshTokenLifetime)
         );
 
@@ -114,5 +141,10 @@ public class RefreshTokenService {
                     e
             );
         }
+    }
+
+    private String mask(String tokenHash) {
+        return tokenHash.substring(0, Math.min(8, tokenHash.length()))
+                + "...";
     }
 }
